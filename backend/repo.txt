@@ -1,9 +1,21 @@
+Directory: backend
+Files analyzed: 2
+
+Estimated tokens: 633
+
+Directory structure:
+└── backend/
+    ├── infer.py
+    └── main.py
+
+
+================================================
+FILE: infer.py
+================================================
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import TextIteratorStreamer
 import asyncio
-import json
-from models import GenerationEvent, FinishReason, EventType
 
 MAX_NEW_TOKENS = 500
 resource_path = "/home/molyb/code/test_models/gpt2"
@@ -46,16 +58,7 @@ async def generate(text: str):
     )
     
     for chunk in streamer:
-
-        event = json.dumps(
-            GenerationEvent(
-                token = chunk,
-                finish_reason = FinishReason.EOS,
-                event_type = EventType.TOKEN
-            ).model_dump(exclude_unset = True)
-        )
-
-        yield event
+        yield chunk
 
 
 if __name__ == "__main__":
@@ -80,3 +83,51 @@ if __name__ == "__main__":
     
     from pprint import pprint
     pprint(model.get_memory_footprint()/1e6)
+
+
+================================================
+FILE: main.py
+================================================
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import asyncio
+import json
+
+# application imports
+from infer import generate
+
+app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins = ['*'],
+    allow_methods = ['*'],
+    allow_headers = ['*']
+)
+
+async def _stream_response(text):
+    async for token in generate(text):
+        yield f"data: {token}\n"
+
+@app.get("/generate")
+async def generate_response(text: str):
+    return StreamingResponse(
+        _stream_response(text),
+        media_type = "text/event-stream"
+    )
+
+def main():
+    uvicorn.run(
+        "main:app",
+        host = "127.0.0.1",
+        port = 8000,
+        reload = False
+    )
+
+
+if __name__ == "__main__":
+    main()
+

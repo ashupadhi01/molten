@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>molten</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f2ee;
+      --surface: #ffffff;
+      --border: #e0d9d0;
+      --text: #1a1612;
+      --dim: #a09a92;
+      --accent: #d4500a;
+      --accent-dim: #a83d06;
+      --mono: 'IBM Plex Mono', monospace;
+      --display: 'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 80px;
+    }
+
+    header {
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 48px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-family: var(--display);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+    }
+
+    header span {
+      font-size: 0.7rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .input-row {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      padding: 20px;
+      resize: none;
+      min-height: 100px;
+      line-height: 1.6;
+    }
+
+    textarea::placeholder { color: var(--dim); }
+
+    .run-btn {
+      align-self: flex-end;
+      margin: 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-family: var(--display);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .run-btn:hover { background: #e85c10; }
+    .run-btn:active { transform: scale(0.97); }
+    .run-btn:disabled { background: var(--dim); cursor: not-allowed; transform: none; color: #fff; }
+
+    .output-area {
+      padding: 24px;
+      min-height: 180px;
+      position: relative;
+    }
+
+    .output-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 14px;
+    }
+
+    #output {
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 60px;
+    }
+
+    #output.empty::before {
+      content: 'output appears here…';
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background: var(--accent);
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    .status-bar {
+      border-top: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--dim);
+      transition: background 0.3s;
+    }
+    .dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .dot.error  { background: #cc2200; }
+
+    #status-text {
+      font-size: 0.7rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+    }
+
+    .token-count {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: var(--dim);
+    }
+
+    #clear-btn {
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.15s;
+    }
+    #clear-btn:hover { color: var(--text); }
+
+    .error-msg {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      color: #cc2200;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>molten</h1>
+  <span>local model server</span>
+</header>
+
+<div class="card">
+  <div class="input-row">
+    <textarea id="prompt" placeholder="Enter your prompt…" rows="4"></textarea>
+    <button class="run-btn" id="run-btn" onclick="runGenerate()">Generate</button>
+  </div>
+
+  <div class="output-area">
+    <div class="output-label">Response</div>
+    <div id="output" class="empty"></div>
+  </div>
+
+  <div class="status-bar">
+    <div class="dot" id="dot"></div>
+    <span id="status-text">idle</span>
+    <span class="token-count" id="token-count"></span>
+    <button id="clear-btn" onclick="clearOutput()">clear</button>
+  </div>
+</div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+
+  let controller = null;
+  let tokenCount = 0;
+  let cursor = null;
+
+  function setStatus(state, msg) {
+    const dot = document.getElementById('dot');
+    const txt = document.getElementById('status-text');
+    dot.className = 'dot' + (state === 'active' ? ' active' : state === 'error' ? ' error' : '');
+    txt.textContent = msg;
+  }
+
+  function clearOutput() {
+    const out = document.getElementById('output');
+    out.textContent = '';
+    out.classList.add('empty');
+    document.getElementById('token-count').textContent = '';
+    tokenCount = 0;
+    setStatus('', 'idle');
+  }
+
+  async function runGenerate() {
+    const prompt = document.getElementById('prompt').value.trim();
+    if (!prompt) return;
+
+    if (controller) { controller.abort(); }
+    controller = new AbortController();
+
+    const out = document.getElementById('output');
+    const btn = document.getElementById('run-btn');
+    out.textContent = '';
+    out.classList.remove('empty');
+    tokenCount = 0;
+
+    // add blinking cursor
+    cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    out.appendChild(cursor);
+
+    btn.disabled = true;
+    btn.textContent = 'Stop';
+    btn.onclick = () => { controller.abort(); finalize('stopped'); };
+    setStatus('active', 'generating…');
+
+    try {
+      const res = await fetch(`${API_BASE}/generate?text=${encodeURIComponent(prompt)}`, {
+        signal: controller.signal
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const raw = decoder.decode(value, { stream: true });
+        // parse SSE: each line is "data: <token>"
+        for (const line of raw.split('\n')) {
+          if (line.startsWith('data: ')) {
+            const token = line.slice(6); // strip "data: "
+            // insert before cursor
+            out.insertBefore(document.createTextNode(token), cursor);
+            tokenCount += token.length;
+            document.getElementById('token-count').textContent = `${tokenCount} chars`;
+          }
+        }
+      }
+
+      finalize('done');
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      finalize('error');
+      const err = document.createElement('div');
+      err.className = 'error-msg';
+      err.textContent = `Error: ${e.message}`;
+      out.parentElement.appendChild(err);
+      setStatus('error', 'failed');
+    }
+  }
+
+  function finalize(state) {
+    if (cursor && cursor.parentNode) cursor.remove();
+    cursor = null;
+    const btn = document.getElementById('run-btn');
+    btn.disabled = false;
+    btn.textContent = 'Generate';
+    btn.onclick = runGenerate;
+    if (state === 'done') setStatus('', 'done');
+    else if (state === 'stopped') setStatus('', 'stopped');
+    controller = null;
+  }
+
+  // Ctrl+Enter to submit
+  document.getElementById('prompt').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) runGenerate();
+  });
+</script>
+
+</body>
+</html>

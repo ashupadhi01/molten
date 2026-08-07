@@ -9,6 +9,8 @@ wheels/
 # Virtual environments
 .venv
 
+# Custom
 llm.txt
 digest.txt
 uv.lock
+ingest.py
