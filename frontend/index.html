@@ -279,19 +279,31 @@
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const raw = decoder.decode(value, { stream: true });
-        // parse SSE: each line is "data: <token>"
-        for (const line of raw.split('\n')) {
-          if (line.startsWith('data: ')) {
-            const token = line.slice(6); // strip "data: "
-            // insert before cursor
-            out.insertBefore(document.createTextNode(token), cursor);
-            tokenCount += token.length;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        // keep the last (possibly incomplete) chunk in the buffer
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          let event;
+          try {
+            event = JSON.parse(trimmed);
+          } catch (e) {
+            continue; // skip malformed/partial lines
+          }
+
+          if (event.event_type === 'TOKEN' && event.token != null) {
+            out.insertBefore(document.createTextNode(event.token), cursor);
+            tokenCount += event.token.length;
             document.getElementById('token-count').textContent = `${tokenCount} chars`;
           }
         }

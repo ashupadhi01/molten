@@ -23,5 +23,3 @@ class GenerationEvent(BaseModel):
     finish_reason: Optional[FinishReason] = None
     event_type: EventType
 
-
-# completeion_tokens, average_tps, total_generation_time and finish_reason will be only on completion event type, ttft will be only on the first token along with prompt tokens, 

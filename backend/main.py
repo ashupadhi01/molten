@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import asyncio
 
 # application imports
 from infer import generate
@@ -20,13 +19,13 @@ app.add_middleware(
 async def _stream_response(text):
     async for event in generate(text):
         yield event
-        await asyncio.sleep(3)
 
 @app.get("/generate")
 async def generate_response(text: str):
     return StreamingResponse(
         _stream_response(text),
         media_type = "text/event-stream"
+        # media_type = "application/x-ndjson"
     )
 
 def main():
