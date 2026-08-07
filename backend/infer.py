@@ -4,10 +4,13 @@ from transformers import TextIteratorStreamer
 import asyncio
 import json
 import time
+import os
 from models import GenerationEvent, FinishReason, EventType
 
 MAX_NEW_TOKENS = 50
-resource_path = "/home/ashutosh/models/gpt2"
+
+resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
+print(resource_path)
 device = torch.accelerator.current_accelerator()
 
 print(f"Current Device: {device}")
