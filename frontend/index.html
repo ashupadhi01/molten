@@ -15,10 +15,26 @@
       --border: #e0d9d0;
       --text: #1a1612;
       --dim: #a09a92;
-      --accent: #d4500a;
-      --accent-dim: #a83d06;
+      --accent: #6b5742;
+      --accent-hover: #7d6852;
+      --accent-dim: #544434;
+      --error: #cc2200;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
       --mono: 'IBM Plex Mono', monospace;
       --display: 'Syne', sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #262220;
+      --surface: #2e2a27;
+      --border: #3d3733;
+      --text: #e8e1d6;
+      --dim: #8a8077;
+      --accent: #c8c2ba;
+      --accent-hover: #d8d3cb;
+      --accent-dim: #a89f93;
+      --error: #ff6b4a;
+      --shadow: 0 2px 18px rgba(0,0,0,0.45);
     }
 
     body {
@@ -30,6 +46,7 @@
       flex-direction: column;
       align-items: center;
       padding: 48px 24px 80px;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     header {
@@ -43,18 +60,36 @@
 
     header h1 {
       font-family: var(--display);
-      font-size: 2rem;
+      font-size: 2.4rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       color: var(--accent);
     }
 
     header span {
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       color: var(--dim);
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
+
+    .theme-toggle {
+      margin-left: auto;
+      align-self: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
     .card {
       width: 100%;
@@ -63,7 +98,7 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      box-shadow: var(--shadow);
     }
 
     .input-row {
@@ -78,7 +113,7 @@
       outline: none;
       color: var(--text);
       font-family: var(--mono);
-      font-size: 0.85rem;
+      font-size: 1rem;
       padding: 20px;
       resize: none;
       min-height: 100px;
@@ -94,7 +129,7 @@
       color: #fff;
       border: none;
       font-family: var(--display);
-      font-size: 0.8rem;
+      font-size: 0.9rem;
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
@@ -105,7 +140,7 @@
       white-space: nowrap;
     }
 
-    .run-btn:hover { background: #e85c10; }
+    .run-btn:hover { background: var(--accent-hover); }
     .run-btn:active { transform: scale(0.97); }
     .run-btn:disabled { background: var(--dim); cursor: not-allowed; transform: none; color: #fff; }
 
@@ -116,7 +151,7 @@
     }
 
     .output-label {
-      font-size: 0.65rem;
+      font-size: 0.75rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       color: var(--dim);
@@ -124,7 +159,7 @@
     }
 
     #output {
-      font-size: 0.85rem;
+      font-size: 1rem;
       line-height: 1.8;
       color: var(--text);
       white-space: pre-wrap;
@@ -165,17 +200,17 @@
       transition: background 0.3s;
     }
     .dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-    .dot.error  { background: #cc2200; }
+    .dot.error  { background: var(--error); }
 
     #status-text {
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       color: var(--dim);
       letter-spacing: 0.08em;
     }
 
     .token-count {
       margin-left: auto;
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       color: var(--dim);
     }
 
@@ -184,7 +219,7 @@
       border: none;
       color: var(--dim);
       font-family: var(--mono);
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       cursor: pointer;
       padding: 0;
       transition: color 0.15s;
@@ -193,9 +228,99 @@
 
     .error-msg {
       margin-top: 10px;
-      font-size: 0.78rem;
-      color: #cc2200;
+      font-size: 0.88rem;
+      color: var(--error);
     }
+
+    .metrics {
+      border-top: 1px solid var(--border);
+      padding: 18px 24px;
+      display: none;
+    }
+    .metrics.show { display: block; }
+
+    .metrics-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 14px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .metric-key {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 4px;
+    }
+
+    .metric-val {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .metric-val .unit {
+      font-size: 0.75rem;
+      color: var(--dim);
+      font-weight: 400;
+      margin-left: 3px;
+    }
+
+    .finish-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: #fff;
+    }
+    .finish-badge.max { background: var(--dim); }
+
+    .itl-panel {
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      display: none;
+    }
+    .itl-panel.show { display: block; }
+
+    .itl-head {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .itl-stats { font-size: 0.7rem; color: var(--dim); letter-spacing: 0.05em; text-transform: none; }
+
+    .itl-chart { width: 100%; }
+    .itl-svg { width: 100%; height: auto; display: block; }
+    .itl-svg .gridline { stroke: var(--border); stroke-width: 1; }
+    .itl-svg .axis-label { fill: var(--dim); font-size: 11px; font-family: var(--mono); }
+    .itl-svg .chart-area { fill: var(--accent); fill-opacity: 0.12; }
+    .itl-svg .chart-line { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+    .itl-svg .chart-dot { fill: var(--accent); }
+    .chart-empty { color: var(--dim); font-size: 0.85rem; font-style: italic; }
   </style>
 </head>
 <body>
@@ -203,6 +328,10 @@
 <header>
   <h1>molten</h1>
   <span>local model server</span>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="theme-icon">☀</span>
+    <span id="theme-label">light</span>
+  </button>
 </header>
 
 <div class="card">
@@ -222,6 +351,19 @@
     <span class="token-count" id="token-count"></span>
     <button id="clear-btn" onclick="clearOutput()">clear</button>
   </div>
+
+  <div class="metrics" id="metrics">
+    <div class="metrics-label">Observability</div>
+    <div class="metrics-grid" id="metrics-grid"></div>
+
+    <div class="itl-panel" id="itl-panel">
+      <div class="itl-head">
+        <span>Inter-token latency</span>
+        <span class="itl-stats" id="itl-stats"></span>
+      </div>
+      <div class="itl-chart" id="itl-chart"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -230,6 +372,25 @@
   let controller = null;
   let tokenCount = 0;
   let cursor = null;
+  let itlSamples = [];
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const icon = document.getElementById('theme-icon');
+    const label = document.getElementById('theme-label');
+    if (theme === 'dark') { icon.textContent = '☾'; label.textContent = 'dark'; }
+    else { icon.textContent = '☀'; label.textContent = 'light'; }
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem('molten-theme', next);
+  }
+
+  // restore saved theme (default to light)
+  applyTheme(localStorage.getItem('molten-theme') || 'light');
 
   function setStatus(state, msg) {
     const dot = document.getElementById('dot');
@@ -243,7 +404,13 @@
     out.textContent = '';
     out.classList.add('empty');
     document.getElementById('token-count').textContent = '';
+    document.getElementById('metrics').classList.remove('show');
+    document.getElementById('metrics-grid').innerHTML = '';
+    document.getElementById('itl-panel').classList.remove('show');
+    document.getElementById('itl-chart').innerHTML = '';
+    document.getElementById('itl-stats').textContent = '';
     tokenCount = 0;
+    itlSamples = [];
     setStatus('', 'idle');
   }
 
@@ -259,6 +426,7 @@
     out.textContent = '';
     out.classList.remove('empty');
     tokenCount = 0;
+    itlSamples = [];
 
     // add blinking cursor
     cursor = document.createElement('span');
@@ -294,9 +462,15 @@
           const trimmed = line.trim();
           if (!trimmed) continue;
 
+          // SSE lines are prefixed with "data: "
+          const payload = trimmed.startsWith('data:')
+            ? trimmed.slice(5).trim()
+            : trimmed;
+          if (!payload) continue;
+
           let event;
           try {
-            event = JSON.parse(trimmed);
+            event = JSON.parse(payload);
           } catch (e) {
             continue; // skip malformed/partial lines
           }
@@ -305,6 +479,11 @@
             out.insertBefore(document.createTextNode(event.token), cursor);
             tokenCount += event.token.length;
             document.getElementById('token-count').textContent = `${tokenCount} chars`;
+            // collect inter-token latency (first token carries null = TTFT, skip it)
+            if (event.itl != null) itlSamples.push(event.itl);
+          } else if (event.event_type === 'COMPLETION') {
+            renderMetrics(event);
+            renderITLChart();
           }
         }
       }
@@ -321,6 +500,100 @@
     }
   }
 
+  function renderMetrics(m) {
+    const grid = document.getElementById('metrics-grid');
+    grid.innerHTML = '';
+
+    const fmt = (val, unit) => val == null
+      ? '—'
+      : (unit ? `${val}<span class="unit">${unit}</span>` : `${val}`);
+
+    const rows = [
+      ['TTFT', fmt(m.ttft != null ? m.ttft.toFixed(3) : null, 's')],
+      ['Avg tok/s', fmt(m.average_tps != null ? m.average_tps.toFixed(2) : null)],
+      ['Total time', fmt(m.total_generation_time != null ? m.total_generation_time.toFixed(2) : null, 's')],
+      ['Prompt tokens', fmt(m.prompt_tokens)],
+      ['Completion tokens', fmt(m.completion_tokens)],
+      ['Finish reason', m.finish_reason
+        ? `<span class="finish-badge ${m.finish_reason === 'MAX_TOKEN_REACHED' ? 'max' : ''}">${m.finish_reason}</span>`
+        : '—'],
+    ];
+
+    for (const [key, val] of rows) {
+      const cell = document.createElement('div');
+      cell.className = 'metric';
+      cell.innerHTML = `<div class="metric-key">${key}</div><div class="metric-val">${val}</div>`;
+      grid.appendChild(cell);
+    }
+
+    document.getElementById('metrics').classList.add('show');
+  }
+
+  function renderITLChart() {
+    const panel = document.getElementById('itl-panel');
+    const chart = document.getElementById('itl-chart');
+    const stats = document.getElementById('itl-stats');
+    chart.innerHTML = '';
+
+    const samples = itlSamples;
+    if (!samples.length) {
+      chart.innerHTML = '<div class="chart-empty">no inter-token latency samples</div>';
+      panel.classList.add('show');
+      return;
+    }
+
+    const n = samples.length;
+    const min = Math.min(...samples);
+    const max = Math.max(...samples);
+    const avg = samples.reduce((a, b) => a + b, 0) / n;
+    stats.textContent = `min ${min.toFixed(3)}s · avg ${avg.toFixed(3)}s · max ${max.toFixed(3)}s · ${n} samples`;
+
+    // SVG layout
+    const W = 640, H = 140, padL = 38, padR = 12, padT = 12, padB = 22;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const yMax = max === min ? max + 1e-6 : max;
+    const yMin = Math.max(0, min - (yMax - min) * 0.1);
+    const yRange = yMax - yMin || 1e-6;
+
+    const x = (i) => padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+    const y = (v) => padT + innerH - ((v - yMin) / yRange) * innerH;
+
+    // gridlines (4 horizontal)
+    let grid = '';
+    for (let g = 0; g <= 4; g++) {
+      const gy = padT + (g / 4) * innerH;
+      const gv = yMax - (g / 4) * yRange;
+      grid += `<line class="gridline" x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" />`;
+      grid += `<text class="axis-label" x="${padL - 6}" y="${gy + 3}" text-anchor="end">${gv.toFixed(2)}</text>`;
+    }
+
+    // x-axis labels (start / mid / end)
+    const xLabels = `<text class="axis-label" x="${padL}" y="${H - 6}" text-anchor="middle">1</text>`
+      + `<text class="axis-label" x="${padL + innerW / 2}" y="${H - 6}" text-anchor="middle">${Math.floor(n / 2) + 1}</text>`
+      + `<text class="axis-label" x="${W - padR}" y="${H - 6}" text-anchor="middle">${n}</text>`;
+
+    // line + area
+    const pts = samples.map((v, i) => `${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' ');
+    const area = `M${x(0).toFixed(2)},${(padT + innerH).toFixed(2)} L${pts.replace(/ /g, ' L')} L${x(n - 1).toFixed(2)},${(padT + innerH).toFixed(2)} Z`;
+    const line = `M${pts.replace(/ /g, ' L')}`;
+
+    // dots (only when few enough to be readable)
+    let dots = '';
+    if (n <= 60) {
+      dots = samples.map((v, i) => `<circle class="chart-dot" cx="${x(i).toFixed(2)}" cy="${y(v).toFixed(2)}" r="1.8" />`).join('');
+    }
+
+    chart.innerHTML = `<svg class="itl-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`
+      + grid + xLabels
+      + `<path class="chart-area" d="${area}" />`
+      + `<path class="chart-line" d="${line}" />`
+      + dots
+      + `</svg>`;
+
+    panel.classList.add('show');
+  }
+
   function finalize(state) {
     if (cursor && cursor.parentNode) cursor.remove();
     cursor = null;
@@ -328,8 +601,16 @@
     btn.disabled = false;
     btn.textContent = 'Generate';
     btn.onclick = runGenerate;
-    if (state === 'done') setStatus('', 'done');
-    else if (state === 'stopped') setStatus('', 'stopped');
+    if (state === 'done') {
+      setStatus('', 'done');
+      // auto-scroll to the observability panel so metrics are visible
+      const metrics = document.getElementById('metrics');
+      if (metrics.classList.contains('show')) {
+        metrics.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else if (state === 'stopped') {
+      setStatus('', 'stopped');
+    }
     controller = null;
   }
 

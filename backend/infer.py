@@ -7,9 +7,9 @@ import time
 import os
 from models import GenerationEvent, FinishReason, EventType
 
-MAX_NEW_TOKENS = 50
+MAX_NEW_TOKENS = 1000
 
-resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
+resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
 print(resource_path)
 device = torch.accelerator.current_accelerator()
 
@@ -48,7 +48,8 @@ async def generate(text: str):
             **inputs,
             streamer = streamer,
             max_new_tokens = MAX_NEW_TOKENS,
-            do_sample = True
+            do_sample = True,
+            return_dict_in_generate = True
         )
     )
 
@@ -84,7 +85,7 @@ async def generate(text: str):
             ttft = ttft,
             average_tps = round(len(tokens) / total_generation_time, 2),
             total_generation_time = total_generation_time,
-            finish_reason = FinishReason.EOS  if len(tokens) >= MAX_NEW_TOKENS else FinishReason.MAX_TOKEN_REACHED,
+            finish_reason = FinishReason.MAX_TOKEN_REACHED if len(tokens) >= MAX_NEW_TOKENS else FinishReason.EOS,
             event_type = EventType.COMPLETION
         ).model_dump(exclude_unset = True)
     )
@@ -92,34 +93,55 @@ async def generate(text: str):
     yield f"data: {event}\n\n"
 
 if __name__ == "__main__":
-    # import torch
-    # d = torch.accelerator.current_accelerator()
-    # model_path = "/home/molyb/code/test_models/gpt2"
-    # device = torch.accelerator.current_accelerator()
+    import torch
+    d = torch.accelerator.current_accelerator()
+    resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
 
-    # print(f"Current Device: {device}")
+    device = torch.accelerator.current_accelerator()
 
-    # # Initialise the model
-    # model = AutoModelForCausalLM.from_pretrained(
-    #     model_path,
-    #     dtype = torch.float16,
-    #     device_map = device
-    # )
+    print(f"Current Device: {device}")
 
-    # # Initialise the tokenizer
-    # tokenizer = AutoTokenizer.from_pretrained(
-    #     model_path
-    # )
-    
-    # from pprint import pprint
-    # pprint(model.get_memory_footprint()/1e6)
+    # Initialise the model
+    model = AutoModelForCausalLM.from_pretrained(
+        resource_path,
+        dtype = torch.float16,
+        device_map = device
+    )
+
+    # Initialise the tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        resource_path
+    )
+
+    from pprint import pprint
+    pprint(model.get_memory_footprint()/1e6)
 
 
-    import asyncio
+    text = "existence?<|im_end|>"
+    inputs = tokenizer(text, return_tensors = "pt")
+    inputs = {k: v.to(device) for k, v in inputs.items()}
 
-    async def main():
-        query = "Given a scenario when you are in perfect danger. What would you do?"
-        async for data in generate(query):
-            print(data)
+    outputs = model.generate(
+            **inputs,
+            # streamer = streamer,
+            max_new_tokens = 10,
+            do_sample = True,
+            return_dict_in_generate = True,
+            output_scores = True
+        )
 
-    asyncio.run(main())
+    print("Outputs: ", outputs)
+    # for t in inputs['input_ids'][0]:
+    #     print(t.item(), ' :: ', tokenizer.convert_ids_to_tokens(t.unsqueeze(0))[0])
+
+
+"""
+I have a subtle bug which I don't understand quite well. I have certain query for which one generation event of type `TOKEN` looks like this:
+data: {"token": "existence?<|im_end|>", "itl": 0.0005101159913465381, "event_type": "TOKEN"}
+It seems like it is a single token. But when I manually call the tokeniser to deconstruct it, it is composed of 3 tokens:
+43694  ::  existence
+47  ::  ?
+2  ::  <|im_end|>
+
+What is going on? can you explain me. 
+"""
