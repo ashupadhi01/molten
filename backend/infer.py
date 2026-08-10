@@ -9,7 +9,7 @@ from models import GenerationEvent, FinishReason, EventType
 
 MAX_NEW_TOKENS = 1000
 
-resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
+resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
 print(resource_path)
 device = torch.accelerator.current_accelerator()
 
@@ -123,7 +123,6 @@ if __name__ == "__main__":
 
     outputs = model.generate(
             **inputs,
-            # streamer = streamer,
             max_new_tokens = 10,
             do_sample = True,
             return_dict_in_generate = True,
