@@ -101,48 +101,110 @@
       box-shadow: var(--shadow);
     }
 
-    .input-row {
+    .input-box {
       display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
       border-bottom: 1px solid var(--border);
+      background: var(--surface);
     }
 
     textarea {
-      flex: 1;
+      width: 100%;
       background: transparent;
       border: none;
       outline: none;
       color: var(--text);
       font-family: var(--mono);
       font-size: 1rem;
-      padding: 20px;
+      padding: 0;
       resize: none;
-      min-height: 100px;
-      line-height: 1.6;
+      min-height: 52px;
+      max-height: 350px;
+      line-height: 1.5;
+      overflow-y: auto;
+      field-sizing: content;
     }
 
     textarea::placeholder { color: var(--dim); }
 
+    .input-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 4px;
+    }
+
+    .actions-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    .icon-btn.recording {
+      background: var(--error);
+      color: #fff;
+      border-color: var(--error);
+      animation: pulse-ring 1.5s infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(204, 34, 0, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(204, 34, 0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(204, 34, 0, 0); }
+    }
+
     .run-btn {
-      align-self: flex-end;
-      margin: 16px;
+      margin: 0;
+      height: 38px;
       background: var(--accent);
       color: #fff;
       border: none;
       font-family: var(--display);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      padding: 10px 20px;
+      padding: 0 20px;
       cursor: pointer;
       border-radius: 10px;
-      transition: background 0.15s, transform 0.1s;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
     .run-btn:hover { background: var(--accent-hover); }
     .run-btn:active { transform: scale(0.97); }
-    .run-btn:disabled { background: var(--dim); cursor: not-allowed; transform: none; color: #fff; }
+    .run-btn:disabled { background: var(--dim); cursor: not-allowed; transform: none; color: #fff; opacity: 0.5; }
 
     .output-area {
       padding: 24px;
@@ -335,9 +397,21 @@
 </header>
 
 <div class="card">
-  <div class="input-row">
-    <textarea id="prompt" placeholder="Enter your prompt…" rows="4"></textarea>
-    <button class="run-btn" id="run-btn" onclick="runGenerate()">Generate</button>
+  <div class="input-box">
+    <textarea id="prompt" placeholder="Enter your prompt…" rows="1"></textarea>
+    <div class="input-actions">
+      <div class="actions-right">
+        <button class="icon-btn" id="voice-btn" onclick="toggleVoiceInput()" title="Voice input (Speech to text)" aria-label="Voice input">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <button class="run-btn" id="run-btn" onclick="runGenerate()" disabled>Generate</button>
+      </div>
+    </div>
   </div>
 
   <div class="output-area">
@@ -412,6 +486,7 @@
     tokenCount = 0;
     itlSamples = [];
     setStatus('', 'idle');
+    if (typeof autoResizePrompt === 'function') autoResizePrompt();
   }
 
   async function runGenerate() {
@@ -594,13 +669,30 @@
     panel.classList.add('show');
   }
 
+  const promptInput = document.getElementById('prompt');
+
+  function updateButtonState() {
+    const btn = document.getElementById('run-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const hasText = promptInput.value.trim().length > 0;
+
+    if (!controller) {
+      btn.disabled = !hasText;
+    }
+
+    if (voiceBtn) {
+      voiceBtn.style.display = (hasText && !isListening) ? 'none' : 'inline-flex';
+    }
+  }
+
   function finalize(state) {
     if (cursor && cursor.parentNode) cursor.remove();
     cursor = null;
     const btn = document.getElementById('run-btn');
-    btn.disabled = false;
     btn.textContent = 'Generate';
     btn.onclick = runGenerate;
+    controller = null;
+    updateButtonState();
     if (state === 'done') {
       setStatus('', 'done');
       // auto-scroll to the observability panel so metrics are visible
@@ -611,11 +703,87 @@
     } else if (state === 'stopped') {
       setStatus('', 'stopped');
     }
-    controller = null;
+  }
+
+  function autoResizePrompt() {
+    promptInput.style.height = 'auto';
+    promptInput.style.height = Math.max(44, promptInput.scrollHeight) + 'px';
+    updateButtonState();
+  }
+
+  promptInput.addEventListener('input', autoResizePrompt);
+  autoResizePrompt();
+
+  // Voice Input (Speech to Text) Handler
+  let recognition = null;
+  let isListening = false;
+
+  function toggleVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const voiceBtn = document.getElementById('voice-btn');
+
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in your current browser. Please use Google Chrome, Microsoft Edge, or Safari.');
+      return;
+    }
+
+    if (isListening) {
+      if (recognition) recognition.stop();
+      return;
+    }
+
+    try {
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = navigator.language || 'en-US';
+
+      let baseText = promptInput.value;
+      if (baseText && !baseText.endsWith(' ')) baseText += ' ';
+
+      recognition.onstart = () => {
+        isListening = true;
+        voiceBtn.classList.add('recording');
+        voiceBtn.title = 'Listening… Click to stop';
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        promptInput.value = baseText + transcript;
+        autoResizePrompt();
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        stopVoiceInput();
+      };
+
+      recognition.onend = () => {
+        stopVoiceInput();
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+      stopVoiceInput();
+    }
+  }
+
+  function stopVoiceInput() {
+    isListening = false;
+    const voiceBtn = document.getElementById('voice-btn');
+    if (voiceBtn) {
+      voiceBtn.classList.remove('recording');
+      voiceBtn.title = 'Voice input (Speech to text)';
+    }
+    updateButtonState();
   }
 
   // Ctrl+Enter to submit
-  document.getElementById('prompt').addEventListener('keydown', e => {
+  promptInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) runGenerate();
   });
 </script>

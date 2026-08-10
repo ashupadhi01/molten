@@ -23,3 +23,10 @@ class GenerationEvent(BaseModel):
     finish_reason: Optional[FinishReason] = None
     event_type: EventType
 
+
+class SamplingConfig(BaseModel):
+    top_k: int = None
+    top_p: float = None
+    do_sample: bool = False
+    max_new_tokens: int = 40
+    temperature: float = 1
