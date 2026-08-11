@@ -143,6 +143,71 @@
       gap: 8px;
     }
 
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .config-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .config-item input[type="number"] {
+      width: 64px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      padding: 4px 6px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .config-item input[type="number"]:focus { border-color: var(--accent); }
+
+    /* toggle switch for cache */
+    .config-item input[type="checkbox"] {
+      appearance: none;
+      width: 30px;
+      height: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      margin: 0;
+    }
+    .config-item input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--dim);
+      transition: transform 0.15s, background 0.15s;
+    }
+    .config-item input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .config-item input[type="checkbox"]:checked::after {
+      transform: translateX(14px);
+      background: #fff;
+    }
+
     .icon-btn {
       width: 38px;
       height: 38px;
@@ -400,6 +465,16 @@
   <div class="input-box">
     <textarea id="prompt" placeholder="Enter your prompt…" rows="1"></textarea>
     <div class="input-actions">
+      <div class="config-row">
+        <label class="config-item" title="Toggle KV cache">
+          <input type="checkbox" id="use-cache" checked />
+          cache
+        </label>
+        <label class="config-item" title="Maximum number of new tokens to generate">
+          max tokens
+          <input type="number" id="max-tokens" value="50" min="0" step="1" />
+        </label>
+      </div>
       <div class="actions-right">
         <button class="icon-btn" id="voice-btn" onclick="toggleVoiceInput()" title="Voice input (Speech to text)" aria-label="Voice input">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -514,8 +589,22 @@
     setStatus('active', 'generating…');
 
     try {
-      const res = await fetch(`${API_BASE}/generate?text=${encodeURIComponent(prompt)}`, {
-        signal: controller.signal
+      const useCache = document.getElementById('use-cache').checked;
+      const maxTokens = parseInt(document.getElementById('max-tokens').value, 10);
+
+      const body = {
+        prompt,
+        generation_config: {
+          max_new_tokens: isNaN(maxTokens) ? 50 : maxTokens,
+          use_cache: useCache,
+        },
+      };
+
+      const res = await fetch(`${API_BASE}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -1,7 +1,8 @@
 TODO:
 
-1. API payload refactor so that it includes parameters of `GenerationConfig`
+1. API payload refactor so that it includes parameters of `GenerationConfig`: DONE
 2. Write a singleton orchestration of `CustomGenerator` class to reuse it throughout the ongoing python process
-3. Write the yield interface of our custom generation loop so that it can be used programmatically; right now it just prints
+3. Write the yield interface of our custom generation loop so that it can be used programmatically; right now it just prints: DONE
 4. Implement non-deterministic sampling
 5. Implement `async` behaviour and threading optionality in our custom generation loop so that it can operate like `TextIteratorStreamer` in HF
+6. Implement the generation loop for GPU

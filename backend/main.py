@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # application imports
-from infer import generate
+from infer_new import stream_response
+from models import GenerateRequestDTO
 
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,16 +16,15 @@ app.add_middleware(
     allow_headers = ['*']
 )
 
-async def _stream_response(text):
-    async for event in generate(text):
+async def _stream_response(payload: GenerateRequestDTO):
+    async for event in stream_response(text = payload.prompt, generation_config = payload.generation_config):
         yield event
 
-@app.get("/generate")
-async def generate_response(text: str):
+@app.post("/generate")
+async def generate_response(payload: GenerateRequestDTO):
     return StreamingResponse(
-        _stream_response(text),
+        _stream_response(payload),
         media_type = "text/event-stream"
-        # media_type = "application/x-ndjson"
     )
 
 def main():
@@ -33,7 +32,7 @@ def main():
         "main:app",
         host = "127.0.0.1",
         port = 8000,
-        reload = False
+        reload = True
     )
 
 

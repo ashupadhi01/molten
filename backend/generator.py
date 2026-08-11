@@ -36,11 +36,12 @@ class CustomGenerator():
             if self._should_stop(token_id.item()):
                 break
 
-            token = tokenizer.decode(token_id)
+            token = self.tokenizer.decode(token_id)
 
             if generation_config.use_cache:
                 input_ids = token_id.unsqueeze(0).unsqueeze(0)
                 past_key_values = output.past_key_values
+                self._compute_kv_cache_size
                 attention_mask = self._update_attention_mask(input_ids.shape[0], past_key_values.get_seq_length() + 1)
 
             else:
@@ -48,6 +49,10 @@ class CustomGenerator():
                 attention_mask = self._update_attention_mask(input_ids.shape[0], input_ids.shape[1])
 
             print(token, end = "", flush = True)
+            # yield token
+
+    def count_prompt_tokens(self, text: str):
+        return len(self.tokenizer(text)["input_ids"])
 
     def _should_stop(self, token_id: int):
         return self.tokenizer.eos_token_id == token_id
@@ -60,6 +65,9 @@ class CustomGenerator():
 
     def _sample(self, logits: torch.Tensor):
         return logits.argmax()
+
+    def _compute_kv_cache_size():
+        ...
 
 if __name__ == "__main__":
     import os
@@ -82,6 +90,9 @@ if __name__ == "__main__":
     )
 
     generator = CustomGenerator(model = model, tokenizer = tokenizer)
+    text = "What is the secret of the universe?"
+
+    # print(generator.count_prompt_tokens(text))
     
     def test(max_new_tokens: int, use_cache: bool):
         print("cache_use: ", use_cache)
