@@ -27,6 +27,10 @@ class GenerationEvent(BaseModel):
 class SamplingConfig(BaseModel):
     top_k: int = None
     top_p: float = None
-    do_sample: bool = False
-    max_new_tokens: int = 40
     temperature: float = 1
+
+class GenerationConfig(BaseModel):
+    max_new_tokens: int = 100
+    use_cache: bool = True
+    do_sample: bool = False
+    sampling_config: SamplingConfig = None
