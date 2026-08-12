@@ -1,5 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers.cache_utils import DynamicCache
 from models import GenerationConfig
 
 class CustomGenerator():
@@ -33,22 +34,22 @@ class CustomGenerator():
 
             token_id = output.logits[0][-1].argmax()
 
-            if self._should_stop(token_id.item()):
-                break
+            # if self._should_stop(token_id.item()):
+                # break
 
             token = self.tokenizer.decode(token_id)
 
             if generation_config.use_cache:
                 input_ids = token_id.unsqueeze(0).unsqueeze(0)
                 past_key_values = output.past_key_values
-                self._compute_kv_cache_size
+                self._compute_kv_cache_size(past_key_values)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], past_key_values.get_seq_length() + 1)
 
             else:
                 input_ids = self._append_token(input_ids, token_id)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], input_ids.shape[1])
 
-            print(token, end = "", flush = True)
+            # print(token, end = "", flush = True)
             # yield token
 
     def count_prompt_tokens(self, text: str):
@@ -66,8 +67,13 @@ class CustomGenerator():
     def _sample(self, logits: torch.Tensor):
         return logits.argmax()
 
-    def _compute_kv_cache_size():
-        ...
+    def _compute_kv_cache_size(self, past_key_values: DynamicCache):
+        total_bytes = 0
+
+        for key, value, _ in past_key_values:
+            total_bytes += (key.element_size() * key.numel() + value.element_size() * value.numel())
+
+        print(f"Seq length: {past_key_values.get_seq_length()}, KV cache: {total_bytes / 1024:.2f} KB, i.e., {(total_bytes / (1024 * 1024)):.2f} MB")
 
 if __name__ == "__main__":
     import os
@@ -76,6 +82,7 @@ if __name__ == "__main__":
     resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
 
     print(resource_path)
+    print(f"Process ID: {os.getpid()}")
 
 
     # Initialise the model
@@ -90,23 +97,24 @@ if __name__ == "__main__":
     )
 
     generator = CustomGenerator(model = model, tokenizer = tokenizer)
-    text = "What is the secret of the universe?"
+    # text = "What"
 
     # print(generator.count_prompt_tokens(text))
     
     def test(max_new_tokens: int, use_cache: bool):
-        print("cache_use: ", use_cache)
+        print("CACHE USE: ", use_cache)
 
         config = GenerationConfig(
             max_new_tokens = max_new_tokens,
             use_cache = use_cache
         )
 
-        text = "What is the secret of the universe?"
-        k = tokenizer(text, return_tensors = 'pt')
+        text = "apple"
+        k = generator.tokenizer(text)["input_ids"]
 
-        print("Input Sequence: ", k["input_ids"])
+        print(f"INPUT SEQUENCE: {k}\n")
 
         generator.generate(text, config)
 
     test(max_new_tokens = int(sys.argv[1]), use_cache = False if sys.argv[2] == "false" else True)
+    # uv run generator.py 5 true :example command to run a sample with KV cache
