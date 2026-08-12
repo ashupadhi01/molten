@@ -2,6 +2,10 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.cache_utils import DynamicCache
 from models import GenerationConfig
+import time
+print(torch.__config__.parallel_info())
+torch.set_num_threads(1)
+
 
 class CustomGenerator():
     def __init__(
@@ -15,13 +19,14 @@ class CustomGenerator():
     def generate(
         self,
         text: str,
-        generation_config: GenerationConfig
+        generation_config: GenerationConfig,
     ):
         inputs = self.tokenizer(text, return_tensors = "pt")
 
         input_ids = inputs["input_ids"]
         attention_mask = inputs["attention_mask"]
         past_key_values = None
+        total_kv_size = 0
 
         for _ in range(generation_config.max_new_tokens):
 
@@ -42,13 +47,14 @@ class CustomGenerator():
             if generation_config.use_cache:
                 input_ids = token_id.unsqueeze(0).unsqueeze(0)
                 past_key_values = output.past_key_values
-                self._compute_kv_cache_size(past_key_values)
+                total_kv_size += self._compute_kv_cache_size(past_key_values)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], past_key_values.get_seq_length() + 1)
 
             else:
                 input_ids = self._append_token(input_ids, token_id)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], input_ids.shape[1])
 
+        print(f"Cumulative sum of all KV cache tensor for the generation: {total_kv_size}")
             # print(token, end = "", flush = True)
             # yield token
 
@@ -73,13 +79,24 @@ class CustomGenerator():
         for key, value, _ in past_key_values:
             total_bytes += (key.element_size() * key.numel() + value.element_size() * value.numel())
 
-        print(f"Seq length: {past_key_values.get_seq_length()}, KV cache: {total_bytes / 1024:.2f} KB, i.e., {(total_bytes / (1024 * 1024)):.2f} MB")
+        print(f"Seq length: {past_key_values.get_seq_length()}, KV cache: {(total_bytes / (1024 * 1024)):.2f} MB")
+        print(f"Process memory usage: {self._get_memory_usage() / 1024:.2f} MB\n\n")
+        return total_bytes / (1024 * 1024)
+
+    def _get_memory_usage(self):
+        with open(f"/proc/{os.getpid()}/smaps_rollup") as f:
+            uss_kb = sum(
+                int(line.split()[1])
+                for line in f
+                if line.startswith(("Private_Clean", "Private_Dirty"))
+            )
+        return uss_kb
 
 if __name__ == "__main__":
     import os
     import sys
-    # resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
-    resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
+    resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M')
+    # resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
 
     print(resource_path)
     print(f"Process ID: {os.getpid()}")
@@ -97,24 +114,27 @@ if __name__ == "__main__":
     )
 
     generator = CustomGenerator(model = model, tokenizer = tokenizer)
-    # text = "What"
-
-    # print(generator.count_prompt_tokens(text))
     
-    def test(max_new_tokens: int, use_cache: bool):
-        print("CACHE USE: ", use_cache)
+    def test(use_cache: bool):
+        print("\nCACHE USE: ", use_cache)
 
-        config = GenerationConfig(
-            max_new_tokens = max_new_tokens,
-            use_cache = use_cache
-        )
+        config = GenerationConfig(use_cache = use_cache)
 
-        text = "apple"
-        k = generator.tokenizer(text)["input_ids"]
+        while True:
+            output_seq_len = int(input("OUTPUT_SEQ_LEN: "))
+            text = input("INPUT: ")
 
-        print(f"INPUT SEQUENCE: {k}\n")
+            k = generator.tokenizer(text)["input_ids"]
+            print(f"\nINPUT_SEQUENCE: {k}\n")
+            config.max_new_tokens = output_seq_len
 
-        generator.generate(text, config)
+            curr_footprint = generator._get_memory_usage() / 1024
+            generator.generate(text, config)
+            after_footprint = generator._get_memory_usage() / 1024
 
-    test(max_new_tokens = int(sys.argv[1]), use_cache = False if sys.argv[2] == "false" else True)
-    # uv run generator.py 5 true :example command to run a sample with KV cache
+            print(f"Process footprint before generation: {curr_footprint}")
+            print(f"Process footprint after generation: {after_footprint}")
+            print(f"Generation process memory diff: {after_footprint - curr_footprint} MB\n\n")
+            
+    test(use_cache = False if sys.argv[1] == "false" else True)
+    # uv run generator.py true
