@@ -1,0 +1,214 @@
+/home/molyb/models/SmolLM2-360M-Instruct
+Process ID: 198472
+Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████| 290/290 [00:00<00:00, 1962.56it/s]
+
+CACHE USE:  True
+OUTPUT_SEQ_LEN: 50
+INPUT: hello
+
+INPUT_SEQUENCE: [28120]
+
+Seq length: 1, KV cache: 0.04 MB
+Process memory usage: 1475.41 MB
+
+
+Seq length: 2, KV cache: 0.08 MB
+Process memory usage: 1478.23 MB
+
+
+Seq length: 3, KV cache: 0.12 MB
+Process memory usage: 1481.46 MB
+
+
+Seq length: 4, KV cache: 0.16 MB
+Process memory usage: 1484.79 MB
+
+
+Seq length: 5, KV cache: 0.20 MB
+Process memory usage: 1488.15 MB
+
+
+Seq length: 6, KV cache: 0.23 MB
+Process memory usage: 1491.56 MB
+
+
+Seq length: 7, KV cache: 0.27 MB
+Process memory usage: 1494.95 MB
+
+
+Seq length: 8, KV cache: 0.31 MB
+Process memory usage: 1498.36 MB
+
+
+Seq length: 9, KV cache: 0.35 MB
+Process memory usage: 1501.81 MB
+
+
+Seq length: 10, KV cache: 0.39 MB
+Process memory usage: 1505.30 MB
+
+
+Seq length: 11, KV cache: 0.43 MB
+Process memory usage: 1508.83 MB
+
+
+Seq length: 12, KV cache: 0.47 MB
+Process memory usage: 1512.39 MB
+
+
+Seq length: 13, KV cache: 0.51 MB
+Process memory usage: 1516.00 MB
+
+
+Seq length: 14, KV cache: 0.55 MB
+Process memory usage: 1519.64 MB
+
+
+Seq length: 15, KV cache: 0.59 MB
+Process memory usage: 1523.32 MB
+
+
+Seq length: 16, KV cache: 0.62 MB
+Process memory usage: 1527.04 MB
+
+
+Seq length: 17, KV cache: 0.66 MB
+Process memory usage: 1530.79 MB
+
+
+Seq length: 18, KV cache: 0.70 MB
+Process memory usage: 1534.58 MB
+
+
+Seq length: 19, KV cache: 0.74 MB
+Process memory usage: 1538.41 MB
+
+
+Seq length: 20, KV cache: 0.78 MB
+Process memory usage: 1542.28 MB
+
+
+Seq length: 21, KV cache: 0.82 MB
+Process memory usage: 1546.18 MB
+
+
+Seq length: 22, KV cache: 0.86 MB
+Process memory usage: 1550.13 MB
+
+
+Seq length: 23, KV cache: 0.90 MB
+Process memory usage: 1554.11 MB
+
+
+Seq length: 24, KV cache: 0.94 MB
+Process memory usage: 1558.12 MB
+
+
+Seq length: 25, KV cache: 0.98 MB
+Process memory usage: 1562.22 MB
+
+
+Seq length: 26, KV cache: 1.02 MB
+Process memory usage: 1566.38 MB
+
+
+Seq length: 27, KV cache: 1.05 MB
+Process memory usage: 1570.59 MB
+
+
+Seq length: 28, KV cache: 1.09 MB
+Process memory usage: 1574.83 MB
+
+
+Seq length: 29, KV cache: 1.13 MB
+Process memory usage: 1579.11 MB
+
+
+Seq length: 30, KV cache: 1.17 MB
+Process memory usage: 1583.42 MB
+
+
+Seq length: 31, KV cache: 1.21 MB
+Process memory usage: 1587.78 MB
+
+
+Seq length: 32, KV cache: 1.25 MB
+Process memory usage: 1592.17 MB
+
+
+Seq length: 33, KV cache: 1.29 MB
+Process memory usage: 1596.60 MB
+
+
+Seq length: 34, KV cache: 1.33 MB
+Process memory usage: 1601.06 MB
+
+
+Seq length: 35, KV cache: 1.37 MB
+Process memory usage: 1605.57 MB
+
+
+Seq length: 36, KV cache: 1.41 MB
+Process memory usage: 1610.11 MB
+
+
+Seq length: 37, KV cache: 1.45 MB
+Process memory usage: 1614.70 MB
+
+
+Seq length: 38, KV cache: 1.48 MB
+Process memory usage: 1619.32 MB
+
+
+Seq length: 39, KV cache: 1.52 MB
+Process memory usage: 1623.97 MB
+
+
+Seq length: 40, KV cache: 1.56 MB
+Process memory usage: 1628.67 MB
+
+
+Seq length: 41, KV cache: 1.60 MB
+Process memory usage: 1633.40 MB
+
+
+Seq length: 42, KV cache: 1.64 MB
+Process memory usage: 1638.17 MB
+
+
+Seq length: 43, KV cache: 1.68 MB
+Process memory usage: 1642.98 MB
+
+
+Seq length: 44, KV cache: 1.72 MB
+Process memory usage: 1647.82 MB
+
+
+Seq length: 45, KV cache: 1.76 MB
+Process memory usage: 1652.71 MB
+
+
+Seq length: 46, KV cache: 1.80 MB
+Process memory usage: 1657.63 MB
+
+
+Seq length: 47, KV cache: 1.84 MB
+Process memory usage: 1662.59 MB
+
+
+Seq length: 48, KV cache: 1.88 MB
+Process memory usage: 1667.59 MB
+
+
+Seq length: 49, KV cache: 1.91 MB
+Process memory usage: 1672.62 MB
+
+
+Seq length: 50, KV cache: 1.95 MB
+Process memory usage: 1677.70 MB
+
+
+Cumulative sum of all KV cache tensor for the generation: 49.8046875
+Process footprint before generation: 1452.765625
+Process footprint after generation: 1676.76953125
+Generation process memory diff: 224.00390625 MB

@@ -16,6 +16,7 @@ class CustomGenerator():
         self.model = model
         self.tokenizer = tokenizer
 
+    @torch.inference_mode
     def generate(
         self,
         text: str,
@@ -95,7 +96,7 @@ class CustomGenerator():
 if __name__ == "__main__":
     import os
     import sys
-    resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M')
+    resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
     # resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
 
     print(resource_path)
