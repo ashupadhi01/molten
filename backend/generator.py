@@ -2,7 +2,8 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.cache_utils import DynamicCache
 from models import GenerationConfig
-import time
+from utils import get_memory_usage
+
 print(torch.__config__.parallel_info())
 torch.set_num_threads(1)
 
@@ -40,24 +41,24 @@ class CustomGenerator():
 
             token_id = output.logits[0][-1].argmax()
 
-            # if self._should_stop(token_id.item()):
-                # break
+            if self._should_stop(token_id.item()):
+                break
 
             token = self.tokenizer.decode(token_id)
 
             if generation_config.use_cache:
                 input_ids = token_id.unsqueeze(0).unsqueeze(0)
                 past_key_values = output.past_key_values
-                total_kv_size += self._compute_kv_cache_size(past_key_values)
+                # total_kv_size += self._compute_kv_cache_size(past_key_values)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], past_key_values.get_seq_length() + 1)
 
             else:
                 input_ids = self._append_token(input_ids, token_id)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], input_ids.shape[1])
 
+            yield token
+
         print(f"Cumulative sum of all KV cache tensor for the generation: {total_kv_size}")
-            # print(token, end = "", flush = True)
-            # yield token
 
     def count_prompt_tokens(self, text: str):
         return len(self.tokenizer(text)["input_ids"])
@@ -74,24 +75,6 @@ class CustomGenerator():
     def _sample(self, logits: torch.Tensor):
         return logits.argmax()
 
-    def _compute_kv_cache_size(self, past_key_values: DynamicCache):
-        total_bytes = 0
-
-        for key, value, _ in past_key_values:
-            total_bytes += (key.element_size() * key.numel() + value.element_size() * value.numel())
-
-        print(f"Seq length: {past_key_values.get_seq_length()}, KV cache: {(total_bytes / (1024 * 1024)):.2f} MB")
-        print(f"Process memory usage: {self._get_memory_usage() / 1024:.2f} MB\n\n")
-        return total_bytes / (1024 * 1024)
-
-    def _get_memory_usage(self):
-        with open(f"/proc/{os.getpid()}/smaps_rollup") as f:
-            uss_kb = sum(
-                int(line.split()[1])
-                for line in f
-                if line.startswith(("Private_Clean", "Private_Dirty"))
-            )
-        return uss_kb
 
 if __name__ == "__main__":
     import os
@@ -129,9 +112,9 @@ if __name__ == "__main__":
             print(f"\nINPUT_SEQUENCE: {k}\n")
             config.max_new_tokens = output_seq_len
 
-            curr_footprint = generator._get_memory_usage() / 1024
+            curr_footprint = get_memory_usage() / 1024
             generator.generate(text, config)
-            after_footprint = generator._get_memory_usage() / 1024
+            after_footprint = get_memory_usage() / 1024
 
             print(f"Process footprint before generation: {curr_footprint}")
             print(f"Process footprint after generation: {after_footprint}")

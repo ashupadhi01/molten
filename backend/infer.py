@@ -5,7 +5,7 @@ from generator import CustomGenerator
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from models import GenerationConfig, GenerationEvent, EventType, FinishReason
 
-resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
+resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
 
 model = AutoModelForCausalLM.from_pretrained(resource_path)
 tokenizer = AutoTokenizer.from_pretrained(resource_path)
