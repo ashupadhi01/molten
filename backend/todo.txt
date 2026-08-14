@@ -1,7 +1,15 @@
 TODO:
 
-- Write a singleton orchestration of `CustomGenerator` class to reuse it throughout the ongoing python process
 - Implement non-deterministic sampling
+
 - Implement `async` behaviour and threading optionality in our custom generation loop so that it can operate like `TextIteratorStreamer` in HF
-- Refactor the generation loop to use GPU accounting for all tensor movements from host to device & vice-versa
+  - Offload `.generate()` (sync generator) to a Python worker thread via `run_in_executor` so a new request isn't fully blocked while another generates. Tradeoff: both concurrent requests get worse per-request latency (cores shared), but neither is starved.
+  - `run_in_executor` returns a value, not a stream — can't `await` a sync generator directly or TTFT collapses (whole generation runs before first token). Need a queue bridge:
+    - Worker thread runs the sync `.generate()` loop, pushes each token onto a thread-safe handoff.
+    - Async side (in `infer.py`) pulls from the handoff and yields SSE events as tokens arrive.
+    - Primitive for thread→asyncio handoff: `loop.call_soon_threadsafe` (can't `await` from inside the worker thread).
+  - Keep the offload in `infer.py`, not `CustomGenerator` — the generator shouldn't know asyncio exists; offload is a serving/orchestration concern.
+  - Open follow-up: client disconnect mid-generation leaves an orphaned worker thread still burning CPU. Need a cancellation signal (e.g. a threading.Event the async side sets on disconnect, worker checks between tokens).
+
+- Refactor the generation loop to use GPU; accounting for all tensor movements from host to device & vice-versa
 - Send cumulative KV cache of the entire sequence at the completion event

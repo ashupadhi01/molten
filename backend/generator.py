@@ -5,7 +5,7 @@ from models import GenerationConfig
 from utils import get_memory_usage
 
 print(torch.__config__.parallel_info())
-torch.set_num_threads(1)
+# torch.set_num_threads(1)
 
 
 class CustomGenerator():
@@ -16,6 +16,7 @@ class CustomGenerator():
     ):
         self.model = model
         self.tokenizer = tokenizer
+        self.kv_cache_size: float = None
 
     @torch.inference_mode
     def generate(
@@ -39,7 +40,7 @@ class CustomGenerator():
                 past_key_values = past_key_values
             )
 
-            token_id = output.logits[0][-1].argmax()
+            token_id = self._sample(output.logits[0][-1])
 
             if self._should_stop(token_id.item()):
                 break
@@ -79,7 +80,7 @@ class CustomGenerator():
 if __name__ == "__main__":
     import os
     import sys
-    resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
+    resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M')
     # resource_path = os.path.join(os.path.expanduser('~'), 'models/gpt2')
 
     print(resource_path)

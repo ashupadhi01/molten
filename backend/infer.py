@@ -1,19 +1,8 @@
 import os
 import time
 import json
-from generator import CustomGenerator
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from models import GenerationConfig, GenerationEvent, EventType, FinishReason
-
-resource_path = os.path.join(os.path.expanduser('~'), 'models/SmolLM2-360M-Instruct')
-
-model = AutoModelForCausalLM.from_pretrained(resource_path)
-tokenizer = AutoTokenizer.from_pretrained(resource_path)
-
-generator = CustomGenerator(
-    model = model,
-    tokenizer = tokenizer
-)
+from runtime import generator
 
 async def stream_response(
     text: str,
