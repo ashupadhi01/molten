@@ -11,3 +11,4 @@ wheels/
 
 # Custom
 uv.lock
+ingest.py

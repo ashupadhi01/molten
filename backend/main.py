@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # application imports
-from infer_new import stream_response
+from infer import stream_response
 from models import GenerateRequestDTO
 
 app = FastAPI()
