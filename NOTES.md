@@ -1,4 +1,4 @@
-# NOTE — Project Insights Log
+# NOTES
 
 ## KV Cache & Memory Growth (2026-08-13)
 
@@ -55,3 +55,62 @@
 **The real lever is batching, and neither (A) nor (B) reaches it.** Batch-1 decode is **memory-bandwidth bound**, not compute-bound — you load full weight matrices to produce one token. Adding cores (A) barely helps decode (memory-bound); (B) has N requests each hammering the same bandwidth, so no N× throughput. Batching reads weights *once* for N requests → N tokens for one memory pass. That's the move that actually changes throughput. Prefill is more compute-bound, so (A) helps there; decode doesn't benefit from either parallelism strategy.
 
 **Lesson:** For a single local model, async-ifying the bookkeeping is ceremony, offloading the forward pass has GIL-release-enabled overlap but trades memory for concurrency, and the throughput lever that dominates both is batching. Keep per-request stats out of shared instance state.
+
+---
+
+## asyncio Concurrency Primitives — `create_task` vs `to_thread` vs `run_in_executor` (2026-08-16)
+
+**Question:** What's the real contract of `asyncio.create_task()`, `asyncio.to_thread()`, and `loop.run_in_executor()` — and why do they seem to take/return different things?
+
+**The first principle: what each API takes as input.**
+- `create_task(coro)` takes a **coroutine object** — the *result* of calling an `async def` (`f()`, not `f`). A coroutine object only exists *after* you call the async function; the function itself is not a coroutine.
+- `to_thread(func)` takes a **callable** — the sync function itself (`f`, not `f()`). It does the calling itself, inside the worker thread.
+- `run_in_executor(executor, func)` — the low-level primitive `to_thread` wraps — also takes a callable.
+
+**The failure modes are symmetric and reveal the contract.**
+- `create_task(f)` → `TypeError: a coroutine was expected` (you passed a function, not a coroutine).
+- `to_thread(f())` → runs `f` *now in the current thread*, passes its return value (e.g. `None`) → `TypeError: 'NoneType' object is not callable` (you passed a result, not a callable).
+- Both errors are the same mistake: passing the wrong *kind* of thing. The API tells you exactly what it wants.
+
+**The unifying rule for inputs: who does the calling?**
+- `create_task` → **you** call `f()` to produce the coroutine; the loop schedules it.
+- `to_thread` / `run_in_executor` → **the thread pool** calls `f`; you hand it the recipe.
+
+**The second principle: what each returns, and the laziness distinction.**
+- `to_thread(f)` returns a **coroutine** — *lazy*. It does nothing until awaited. Without `await` → `RuntimeWarning: coroutine was never awaited` (a leak detector: you created an awaitable and discarded it).
+- `create_task(f())` returns a **`Task`** — *eagerly scheduled*. Creating the task immediately schedules it on the loop, so it runs on its own. `await` is only needed to *get the result* or wait for completion, not to start it.
+- `run_in_executor(...)` returns a **`Future`** — a passive result container, *not* scheduled on the loop as a coroutine. The thread fills it in; the loop just watches it.
+
+**`Future` vs `Task` vs coroutine — the object hierarchy.**
+- A **coroutine** is a recipe (lazy; runs only when awaited/scheduled).
+- A **`Task`** is a coroutine + scheduling (a `Future` subclass that also drives a coroutine).
+- A **`Future`** is a result holder (doesn't run code; something else fills it).
+- All three are **awaitable**. `await` parks the current coroutine and resumes it when the awaitable resolves — it blocks *this coroutine*, not the loop (other tasks keep running).
+
+**`to_thread` is a thin wrapper over `run_in_executor`.**
+```python
+async def to_thread(func, /, *args, **kwargs):
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, functools.partial(func, *args, **kwargs))
+```
+So the stack is: `to_thread` → `run_in_executor` → `ThreadPoolExecutor.submit` → `threading.Thread` → OS thread. `to_thread` is just `run_in_executor` with the `await` baked in — which is *why* it must be awaited.
+
+**`await` blocks the coroutine, not the loop.** `await future` suspends the current coroutine until the thread finishes; the loop stays alive to run other tasks. This is the cooperative model: `await` yields control back to the loop. Contrast with `time.sleep()` inside a coroutine, which freezes *everything*.
+
+**Fire-and-forget patterns and their costs.**
+- `create_task(to_thread(f))` — wraps the `to_thread` coroutine in a Task; control returns immediately, thread runs in background. Cost: one extra parked coroutine on the loop (a watcher that just awaits the Future).
+- `run_in_executor(None, f)` — returns a Future you can ignore; no coroutine parked on the loop at all. The raw form, one layer down.
+- `to_thread` alone is a *join* primitive (it awaits), not a *spawn* primitive — wrong tool for a daemon.
+
+**`ThreadPoolExecutor` is lazy; `max_workers` is a cap, not a pre-allocation.** The pool spawns threads on demand, only as many as concurrent tasks require, up to the ceiling. Submitting 1 task to a `max_workers=5` pool → 1 OS thread. Submitting 5 at once → 5 threads. Verified via `pstree -ap <pid>`.
+
+**The pool is the unit of thread management.**
+- `run_in_executor(None, ...)` → always the loop's **one shared default pool**.
+- `run_in_executor(custom_ex, ...)` → that executor's pool; same executor → reused threads; different executors → **separate** thread sets.
+- This lets you partition threading: dedicate pools to different workloads (different `max_workers`, isolation so a stuck task in one pool can't starve another).
+
+**Loop-in-a-thread is possible but coroutines are loop-bound.** You can run `asyncio.run(inner())` inside a `to_thread` worker to get a per-thread event loop. The constraint: a coroutine/Task/Future is bound to the loop that created it — you cannot `await` a coroutine from a different loop (`RuntimeError: attached to a different loop`). Coroutines must be created *inside* the thread's loop, not passed in from outside.
+
+**Lesson:** The asyncio concurrency surface looks confusing because three APIs (`create_task`, `to_thread`, `run_in_executor`) seem to do similar things. They're actually a clean stack: `create_task` schedules a coroutine on the loop (cooperative, single-threaded); `to_thread`/`run_in_executor` offload a callable to an OS thread (parallel, preemptive). The input contract (coroutine object vs callable) and the output contract (lazy coroutine vs eager Task vs passive Future) fall out directly from *who does the calling* and *where the work runs*. Pools are lazy and partitionable. `await` blocks the coroutine, never the loop.
+
+---
