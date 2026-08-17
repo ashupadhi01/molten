@@ -1,10 +1,17 @@
 import os
 import time
 import json
+import asyncio
 from models import GenerationConfig, GenerationEvent, EventType, FinishReason
-from runtime import generator
+from runtime import generator   
 
-async def stream_response(
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor(max_workers = 24)
+
+def _stream_response(
+    loop,
+    queue,
     text: str,
     generation_config: GenerationConfig
 ):
@@ -31,7 +38,7 @@ async def stream_response(
         t0 = t1
 
         tokens.append(token)
-        yield f"data: {event}\n\n"
+        loop.call_soon_threadsafe(queue.put_nowait, event)
     
     end_time = time.perf_counter()
     total_generation_time = round(end_time - start_time, 2)
@@ -48,4 +55,29 @@ async def stream_response(
         ).model_dump(exclude_unset = True)
     )
 
-    yield f"data: {event}\n\n"
+    loop.call_soon_threadsafe(queue.put_nowait, event)
+
+async def stream_response(
+    text: str,
+    generation_config: GenerationConfig
+):
+    queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    future = loop.run_in_executor(
+        executor,
+        _stream_response,
+        loop,
+        queue,
+        text,
+        generation_config
+    )
+
+    while True:
+        event = await queue.get()
+        print(event)
+
+        if event is None:
+            break
+
+        yield f"data: {event}\n\n"

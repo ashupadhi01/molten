@@ -114,3 +114,43 @@ So the stack is: `to_thread` → `run_in_executor` → `ThreadPoolExecutor.submi
 **Lesson:** The asyncio concurrency surface looks confusing because three APIs (`create_task`, `to_thread`, `run_in_executor`) seem to do similar things. They're actually a clean stack: `create_task` schedules a coroutine on the loop (cooperative, single-threaded); `to_thread`/`run_in_executor` offload a callable to an OS thread (parallel, preemptive). The input contract (coroutine object vs callable) and the output contract (lazy coroutine vs eager Task vs passive Future) fall out directly from *who does the calling* and *where the work runs*. Pools are lazy and partitionable. `await` blocks the coroutine, never the loop.
 
 ---
+## Async/Thread Bridge: `asyncio.Queue` + `call_soon_threadsafe` (2026-08-17)
+
+**Problem:** Offload sync generation loop to a worker thread via `run_in_executor`; need to stream tokens back to async endpoint without blocking the event loop.
+
+**Two queue options considered:**
+
+- `queue.Queue` — thread-safe, but `get()` is blocking. Calling it directly from async code blocks the event loop; to avoid that, you'd offload the blocking wait to another thread (`await asyncio.to_thread(q.get)`). Cost: extra executor thread per active stream just to wait, plus a latency hop per token.
+- `asyncio.Queue` — not thread-safe, but can be used cross-thread safely by scheduling puts onto the event loop thread via `loop.call_soon_threadsafe`.
+
+**Chosen pattern:** Worker thread never touches `asyncio.Queue` directly. It schedules a synchronous enqueue onto the event loop:
+
+```python
+def worker(loop, q, text, config):
+    for token in generator.generate(text, config):
+        loop.call_soon_threadsafe(q.put_nowait, token)
+
+    loop.call_soon_threadsafe(q.put_nowait, None)  # sentinel
+```
+
+Async consumer waits asynchronously:
+
+```python
+while True:
+    event = await q.get()
+    if event is None:
+        break
+    yield f"data: {event}\n\n"
+```
+
+**Key clarifications:**
+
+- `asyncio.Queue.put_nowait(item)` and `get_nowait()` are **synchronous**, not coroutines. They return immediately; `get_nowait` raises `asyncio.QueueEmpty` if empty.
+- `asyncio.Queue.get()` and `put()` are coroutines — they `await` and yield control to the event loop while waiting.
+- `call_soon_threadsafe` schedules a callback to run on the event loop thread, making `put_nowait` safe despite `asyncio.Queue` not being thread-safe.
+
+**Why `while not q.empty()` fails:** `empty()` is a synchronous instantaneous check. It returns `True` before the worker enqueues the first token, so the loop exits immediately. Even if non-empty, it wouldn't wait for future items. Must use `await q.get()` and a sentinel.
+
+**Lesson:** For cross-thread streaming into asyncio, the `asyncio.Queue` + `loop.call_soon_threadsafe` bridge is the natural, low-overhead pattern. It keeps queue operations on the event loop thread, avoids extra blocking waits, and preserves backpressure-free token streaming. `queue.Queue` works but costs an extra thread per waiting consumer.
+
+---
