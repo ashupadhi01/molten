@@ -2,16 +2,21 @@ import os
 import time
 import json
 import asyncio
+from asyncio import Queue
 from models import GenerationConfig, GenerationEvent, EventType, FinishReason
-from runtime import generator   
-
+from runtime import generator
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from asyncio import AbstractEventLoop
+
 
 executor = ThreadPoolExecutor(max_workers = 24)
 
 def _stream_response(
-    loop,
-    queue,
+    loop: AbstractEventLoop,
+    queue: Queue,
     text: str,
     generation_config: GenerationConfig
 ):
@@ -56,6 +61,8 @@ def _stream_response(
     )
 
     loop.call_soon_threadsafe(queue.put_nowait, event)
+    loop.call_soon_threadsafe(queue.put_nowait, None)
+
 
 async def stream_response(
     text: str,
@@ -75,7 +82,6 @@ async def stream_response(
 
     while True:
         event = await queue.get()
-        print(event)
 
         if event is None:
             break

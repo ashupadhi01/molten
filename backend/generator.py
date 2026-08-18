@@ -16,7 +16,7 @@ class CustomGenerator():
     ):
         self.model = model
         self.tokenizer = tokenizer
-        self.kv_cache_size: float = None
+        self.kv_cache_size_per_token: float = 0.04
 
     @torch.inference_mode
     def generate(
@@ -29,7 +29,6 @@ class CustomGenerator():
         input_ids = inputs["input_ids"]
         attention_mask = inputs["attention_mask"]
         past_key_values = None
-        total_kv_size = 0
 
         for _ in range(generation_config.max_new_tokens):
 
@@ -50,7 +49,6 @@ class CustomGenerator():
             if generation_config.use_cache:
                 input_ids = token_id.unsqueeze(0).unsqueeze(0)
                 past_key_values = output.past_key_values
-                # total_kv_size += self._compute_kv_cache_size(past_key_values)
                 attention_mask = self._update_attention_mask(input_ids.shape[0], past_key_values.get_seq_length() + 1)
 
             else:
@@ -58,8 +56,6 @@ class CustomGenerator():
                 attention_mask = self._update_attention_mask(input_ids.shape[0], input_ids.shape[1])
 
             yield token
-
-        print(f"Cumulative sum of all KV cache tensor for the generation: {total_kv_size}")
 
     def count_prompt_tokens(self, text: str):
         return len(self.tokenizer(text)["input_ids"])
